@@ -1,4 +1,7 @@
+//! Contains the necessary constants for the gds crate.
 #![allow(dead_code)]
+
+// record types
 pub const REC_TYPE_HEADER: u8 = 0x00;
 pub const REC_TYPE_BGNLIB: u8 = 0x01;
 pub const REC_TYPE_LIBNAME: u8 = 0x02;
@@ -32,6 +35,7 @@ pub const REC_TYPE_EFLAGS: u8 = 0x26;
 pub const REC_TYPE_NODETYPE: u8 = 0x2A;
 pub const REC_TYPE_BGNEXTN: u8 = 0x30;
 
+// data types
 pub const DATA_TYPE_NONE: u8 = 0x00;
 pub const DATA_TYPE_BIT: u8 = 0x01;
 pub const DATA_TYPE_INT16: u8 = 0x02;
@@ -42,6 +46,7 @@ pub const DATA_TYPE_STR: u8 = 0x06;
 
 pub const MAX_DATA_SIZE: usize = 8;
 
+/// Returns the size of the given data type in bytes.
 pub fn data_size(t: u8) -> usize {
     match t {
         x if x == DATA_TYPE_NONE => 0,
