@@ -1,4 +1,9 @@
-/// Library for handling GDSII files
+//! Library for handling GDS files.
+//!
+//! **Not all element and parameter types are implemented yet.**
+//!
+//! Makes use of Andrew Gallant's
+//! [byteorder](https://github.com/BurntSushi/byteorder) crate
 
 extern crate byteorder;
 
@@ -10,17 +15,29 @@ use std::fs::File;
 use std::io::{Read, Write};
 use byteorder::{ByteOrder, BigEndian};
 
+/// A structure representing a GDS file.
+/// The structure consists of header informations and one or more structures.
 #[derive(Clone)]
 pub struct Library {
+    /// Version of GDS used in the File.
     pub version: i16,
+    /// Name of the Library.
     pub name: String,
+    /// Date of last modification.
     pub date_mod: Date,
+    /// Date of last access.
     pub date_acc: Date,
+    /// Database unit in user units.
     pub units_user: f64,
+    /// Database unit in metres.
     pub units_m: f64,
+    /// Vector contaning the structures of the file.
     pub structures: Vec<Structure>
 }
 
+/// A structure representing a date in a GDS file.
+///
+/// The year numbering starts at 0 A.D..
 #[derive(Debug,Clone)]
 pub struct Date {
     pub year: i16,
@@ -31,69 +48,149 @@ pub struct Date {
     pub second: i16
 }
 
+/// A structure representiang a structure in a GDS file.
+///
+/// The structure consist of header informations and one or more elements. A
+/// structure is normally contained in a library.
 #[derive(Debug,Clone)]
 pub struct Structure {
+    /// Name of the structure.
     pub name: String,
+    /// Date of last modification.
     pub date_mod: Date,
+    /// Date of last access.
     pub date_acc: Date,
+    /// Vector of the contained elements.
     pub elements: Vec<Element>
 }
 
+/// A structure representing a element.
+///
+/// Elements are normally contained in a structure. Elements have a type and
+/// maybe some parameters.
 #[derive(Debug,Clone)]
 pub struct Element {
+    /// The type of the element.
     pub element_type: ElementType,
+    /// Vector of parameters.
     pub parameters: Vec<ElementParameter>
 }
 
+/// Enumeration of possible element types.
 #[derive(Debug,Clone)]
 pub enum ElementType {
+    /// No type. This one is not used in a GDS file, its purpose is to serve as
+    /// a default value.
     None,
+    /// A filled polygon defined by a list of points. This type has to have the
+    /// XY parameter with the same coordinates for the first and the last point
+    /// to create a closed loop.
     Boundary,
+    /// A not filled sequence of points. This type has to have the the XY
+    /// parameter.
     Path,
+    /// A reference to another structure. The reference structure is described
+    /// through the StructureName parameter.
     StructureRef,
+    /// An array reference. This element type marks the begining of an array of
+    /// cells.
     ArrayRef,
+    /// A text element.
     Text,
+    /// A description of an electrical path.
     Node,
+    /// A not filled rectangle.
     Box
 }
 
+/// Enumeration of possible element parameters.
 #[derive(Debug,Clone)]
 pub enum ElementParameter {
+    /// The layer of the element.
     Layer(i16),
+    /// Vector of points described by tuples consisting of x- and y-coordinate.
     XY(Vec<(i32,i32)>),
+    /// A user defined parameter. Can be used for any purpose.
     Datatype(i16),
+    /// Width of the element.
     Width(i32),
+    /// Name of referenced Structure.
     StructureName(String),
+    /// Define colums and rows of array. First number describes the number of
+    /// columns, the second one the number of rows.
+    //TODO array instead of vector
     ColRow(Vec<i16>),
+    /// Type of Text.
     TextType(i16),
+    /// Flags describing the presentation of text. Bit 10 and 11 are used for
+    /// the font selection, bit 12 and 13 for the vertical position.
     Presentation(u16),
+    /// String for text.
     String(String),
+    /// Flags describing text transformation.
     StrTransf(u16),
+    /// Magnification factor.
     Magnification(f64),
+    /// Angle in degrees. Positive numbers mean counterclockwise rotation.
     Angle(f64),
+    /// Type of path. Describes end of the path.
+    ///
+    /// * 0 - square ends
+    /// * 1 - rounded ends
+    /// * 2 - square ends with half width
+    /// * 4 - variable square ends (describe using BeginExt and EndExt)
     Pathtype(i16),
+    /// Flags. Bit 15 is used to specity template data, bit 14 for external
+    /// data.
     EFlags(u16),
+    /// Type of the node element.
     Nodetype(i16),
+    /// Extension of the first point of the path. Is used in conjunction with
+    /// pathtype 4.
     BeginExt(i32)
     //TODO more parameters
 }
 
+/// A structure describing a data record in a GDS file.
+///
+/// This type should normally not used manually as the gds file can be read in
+/// automatically into a Library object.
 #[derive(Debug)]
 pub struct Record {
+    /// Size of the record in bytes (including the header).
     pub size: u16,
+    /// Type of the record (see [gds::constants](constants/index.html)).
     pub rec_type: u8,
+    /// Type of data.
+    ///
+    /// * 0 - no data
+    /// * 1 - 16 bits containing flags
+    /// * 2 - 16 bit signed integer
+    /// * 3 - 32 bit signed integer
+    /// * 4 - 32 bit real
+    /// * 5 - 64 bit real
+    /// * 6 - String
     pub data_type: u8,
+    /// Vector of data.
     pub data: Vec<RecordData>
 }
 
+/// Enumeration of possible record data.
 #[derive(Debug,Clone)]
 pub enum RecordData {
+    /// No data.
     None,
+    /// 16 bit of flags.
     Bit(u16),
+    /// 16 bit signed integer.
     Int16(i16),
+    /// 32 bit signed integer.
     Int32(i32),
+    /// 32 bit real.
     Real32(f32),
+    /// 64 bit real.
     Real64(f64),
+    /// String.
     Str(String)
 }
 
@@ -105,7 +202,6 @@ impl fmt::Display for Date {
 }
 
 impl fmt::Display for Library {
-
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f,"Library {} (version {}), modified {} / accessed {}",
             self.name, self.version, self.date_mod, self.date_acc)
@@ -113,18 +209,36 @@ impl fmt::Display for Library {
 }
 
 impl Date {
+    /// Creates new date object.
+    ///
+    /// The returned date contains the default value of 01.01.1970 00:00:00.
     pub fn new() -> Date {
         Date{year: 1970, month: 1, day: 1, hour: 0, minute: 0, second: 0}
     }
 }
 
 impl Library {
+    /// Creates new Library object.
+    ///
+    /// Version `v` and name `n` have to be given. The other values are
+    /// initialized with default values:
+    ///
+    /// * `date_mod` - 01.01.1970 00:00:00
+    /// * `date_acc` - 01.01.1970 00:00:00
+    /// * `units_user` - 0
+    /// * `units_m` - 0
+    /// * `structures` - empty
     pub fn new(v: i16, n: String) -> Library{
         Library{version: v, name: n, date_mod: Date::new(),
             date_acc: Date::new(), units_user: 0., units_m: 0.,
             structures: Vec::new()}
     }
 
+    /// Read library from file.
+    ///
+    /// This function will read the Library from the file given by its filename
+    /// `s`. Specifing a wrong designed file will not result in any errors or
+    /// security problem but in a useless Library object.
     pub fn read(s: &str) -> Library {
         let mut file = File::open(s).unwrap();
         let mut version = 0;
@@ -338,6 +452,10 @@ impl Library {
             structures: structures}
     }
 
+    /// Write library object to file.
+    ///
+    /// The library object will be written to the filed specified by its
+    /// filename `s`.
     pub fn write(&self, s: &str) {
         println!("Writing to {}",s);
         let mut file = File::create(s).unwrap();
@@ -388,6 +506,10 @@ impl Library {
 }
 
 impl Date {
+    /// Creates a [RecordData](enum.RecordData.html) objets.
+    ///
+    /// This function returns the content of the date as RecordData which then
+    /// can be used for writing to a file.
     pub fn to_record_data(&self) -> Vec<RecordData> {
         let mut vec: Vec<RecordData> = Vec::new();
         vec.push(RecordData::Int16(self.year));
@@ -400,12 +522,23 @@ impl Date {
     }
 }
 
+//TODO get data_type from RecordData and test if RecordData consists of only
+//one type
 impl Record {
+    /// Creates new record object from given type and data.
+    ///
+    /// The record will be constructed using the given record type `rec_type`,
+    /// the data type `data_type` and a vector of RecordData objects `data`.
+    /// The size is calculated automatically.
     pub fn new(rec_type: u8, data_type: u8, data: Vec<RecordData>) -> Record {
         let size: u16 = 4+(constants::data_size(data_type)*data.len()) as u16;
         Record{size: size, rec_type: rec_type, data_type: data_type, data: data}
     }
 
+    /// Creates new record object with no data.
+    ///
+    /// The resulting record will be of the type described by `rec_type` (see
+    /// also [gds::constants](constants/index.html)).
     pub fn new_none(rec_type: u8) -> Record {
         let size: u16 = 4;
         let data = vec![RecordData::None];
@@ -413,6 +546,11 @@ impl Record {
         Record{size: size, rec_type: rec_type, data_type: data_type, data: data}
     }
 
+    /// Creates new record object containing a single RecordData object.
+    ///
+    /// The record will be constructed using the given record type `rec_type`,
+    /// the data type `data_type` and a single RecordData object `data`.
+    /// The size is calculated automatically.
     pub fn new_single(rec_type: u8, data_type: u8, data: RecordData) -> Record {
         let mut rec = Record{size: 0, rec_type: rec_type,
             data_type: data_type, data: vec![data]};
@@ -420,11 +558,20 @@ impl Record {
         rec
     }
 
+    /// Pushes new data to record.
+    ///
+    /// The `data` is be pushed to the records data vector and the size is
+    /// recalculated.
     pub fn push_data(&mut self, data: RecordData) {
         self.data.push(data);
         self.update_size();
     }
 
+    /// Calculates new size.
+    ///
+    /// This function calculates the current size of the record data. This
+    /// function is called automatically so that manually invoking is not
+    /// necessary.
     pub fn update_size(&mut self) {
         self.size = 4;
         if self.data_type == constants::DATA_TYPE_STR {
@@ -440,6 +587,7 @@ impl Record {
         }
     }
 
+    /// Read record from file specified by `file`.
     pub fn read(file: &mut File) -> Record {
         let mut buffer = [0; 2];
         let _ = file.read(&mut buffer);
@@ -503,6 +651,7 @@ impl Record {
             data: data}
     }
 
+    /// Write contents of the record to the file specified by `file`.
     pub fn write(&self, file: &mut File) {
         let mut buf: Vec<u8> = Vec::new();
         buf.extend(utils::u16_to_vec(self.size));
@@ -527,6 +676,14 @@ impl Record {
 }
 
 impl Structure {
+    /// Creates new structure.
+    ///
+    /// Default values are used:
+    ///
+    /// * `name` - empty
+    /// * `elements` - empty
+    /// * `date_mod` - 01.01.1970 00:00:00
+    /// * `date_acc` - 01.01.1970 00:00:00
     pub fn new() -> Structure {
         Structure{name: String::from(""), elements: Vec::new(),
             date_mod: Date::new(), date_acc: Date::new()}
@@ -534,10 +691,19 @@ impl Structure {
 }
 
 impl Element {
+    /// Creates new element.
+    ///
+    /// The returned element is of type
+    /// [ElementType](enum.ElementType.html)::None and has an empty set of
+    /// parameters.
     pub fn new() -> Element {
         Element{element_type: ElementType::None, parameters: Vec::new()}
     }
 
+    /// Creates an vector of records.
+    ///
+    /// Returns a vector of records which can be used for writing the content
+    /// of the element to a file.
     pub fn to_records(&self) -> Vec<Record> {
         let mut res = Vec::new();
         let rec_type = match self.element_type {
