@@ -1,7 +1,14 @@
+/// Contains some helper functions used in the gds crate.
+
 extern crate byteorder;
 
 use byteorder::{ByteOrder, BigEndian};
 
+/// Convert a slice of bytes into a 32 bit real.
+///
+/// The used format is not conform to IEEE floats as it uses 16 as base and
+/// excess 64 notation for the exponent. The first byte is used for the
+/// exponent (bits 2-8) and the sign (bit 1).
 pub fn bytes_to_gds_real32(bytes: &[u8]) -> f32 {
     let exp: i8 = ((0b01111111 & bytes[0]) as i8) - 64 - 6;
     let mut man_arr = [0;4];
@@ -16,6 +23,11 @@ pub fn bytes_to_gds_real32(bytes: &[u8]) -> f32 {
     }
 }
 
+/// Convert a slice of bytes into a 64 bit real.
+///
+/// The used format is not conform to IEEE floats as it uses 16 as base and
+/// excess 64 notation for the exponent. The first byte is used for the
+/// exponent (bits 2-8) and the sign (bit 1).
 pub fn bytes_to_gds_real(bytes: &[u8]) -> f64 {
     let exp: i8 = ((0b01111111 & bytes[0]) as i8) - 64 - 14;
     let mut man_arr = [0;8];
@@ -29,6 +41,11 @@ pub fn bytes_to_gds_real(bytes: &[u8]) -> f64 {
     }
 }
 
+/// Converts a 64 bit real into a array of bytes.
+///
+/// The used format is not conform to IEEE floats as it uses 16 as base and
+/// excess 64 notation for the exponent. The first byte is used for the
+/// exponent (bits 2-8) and the sign (bit 1).
 pub fn gds_real_to_bytes(r: f64) -> [u8;8] {
     let mut exp: u8 = 64;
     let mut man: f64 = r.abs();
@@ -57,6 +74,11 @@ pub fn gds_real_to_bytes(r: f64) -> [u8;8] {
     out_arr
 }
 
+/// Converts a 32 bit real into a array of bytes.
+///
+/// The used format is not conform to IEEE floats as it uses 16 as base and
+/// excess 64 notation for the exponent. The first byte is used for the
+/// exponent (bits 2-8) and the sign (bit 1).
 pub fn gds_real_32_to_bytes(r: f32) -> [u8;4] {
     let mut exp: u8 = 64;
     let mut man: f32 = r.abs();
@@ -85,24 +107,28 @@ pub fn gds_real_32_to_bytes(r: f32) -> [u8;4] {
     out_arr
 }
 
+/// Converts a 16 bit signed integer into a vector of bytes.
 pub fn i16_to_vec(i: i16) -> Vec<u8> {
     let mut buf: [u8;2] = [0;2];
     BigEndian::write_i16(&mut buf,i);
     buf.to_vec()
 }
 
+/// Converts a 16 bit unsigned integer into a vector of bytes.
 pub fn u16_to_vec(i: u16) -> Vec<u8> {
     let mut buf: [u8;2] = [0;2];
     BigEndian::write_u16(&mut buf,i);
     buf.to_vec()
 }
 
+/// Converts a 32 bit signed integer into a vector of bytes.
 pub fn i32_to_vec(i: i32) -> Vec<u8> {
     let mut buf: [u8;4] = [0;4];
     BigEndian::write_i32(&mut buf,i);
     buf.to_vec()
 }
 
+/// Converts a 32 bit unsigned integer into a vector of bytes.
 pub fn u32_to_vec(i: u32) -> Vec<u8> {
     let mut buf: [u8;4] = [0;4];
     BigEndian::write_u32(&mut buf,i);
