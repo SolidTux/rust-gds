@@ -1,7 +1,7 @@
 /target/
-Cargo.lock
 [._]*.s[a-w][a-z]
 [._]s[a-w][a-z]
+Cargo.lock
 Session.vim
 .netrwhist
 *~
