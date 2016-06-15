@@ -4,6 +4,13 @@ version = "0.1.1"
 license = "MIT"
 description = "An interface to GDS files"
 authors = ["Daniel Hauck <mail@dhermit.de>"]
+exclude = ["dist/*"]
 
 [dependencies]
 byteorder = "0.5.2"
+
+[package.metadata.tardoc]
+docs = []
+red = "gds/index.html"
+tar = true
+output = "dist"

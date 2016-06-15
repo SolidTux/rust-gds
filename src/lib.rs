@@ -1,9 +1,6 @@
 //! Library for handling GDS files.
 //!
 //! **Not all element and parameter types are implemented yet.**
-//!
-//! Makes use of Andrew Gallant's
-//! [byteorder](https://github.com/BurntSushi/byteorder) crate
 
 extern crate byteorder;
 
